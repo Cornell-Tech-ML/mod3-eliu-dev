@@ -274,13 +274,8 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 2.3.
         out_index: Index = np.zeros(MAX_DIMS, np.int16)
         in_index: Index = np.zeros(MAX_DIMS, np.int16)
-
-        # for each position in the larger output array,
-        # compute the corresponding position in the input shape
-        out_index = np.zeros(len(out_shape), dtype=np.int32)
         for i in range(len(out)):
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, in_shape, in_index)
@@ -332,8 +327,6 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 2.3.
-
         # broadcast_shape expects a tuple so convert a_shape and b_shape to tuples
         out_index: Index = np.zeros(MAX_DIMS, np.int32)
         a_index: Index = np.zeros(MAX_DIMS, np.int32)
@@ -379,7 +372,6 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        # TODO: Implement for Task 2.3.
         out_index: Index = np.zeros(MAX_DIMS, np.int32)
         reduce_size = a_shape[reduce_dim]
         for i in range(len(out)):

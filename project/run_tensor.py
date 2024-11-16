@@ -11,7 +11,6 @@ def RParam(*shape):
     r = 2 * (minitorch.rand(shape) - 0.5)
     return minitorch.Parameter(r)
 
-# TODO: Implement for Task 2.5.
 class Network(minitorch.Module):
     def __init__(self, hidden_layers):
         super().__init__()

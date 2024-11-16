@@ -346,7 +346,7 @@ def test_mm2() -> None:
     c = a @ b
 
     c2 = (a.view(2, 3, 1) * b.view(1, 3, 4)).sum(1).view(2, 4)
-
+    print(f"----\nc: {c}\nc2: {c2}", flush=True)
     for ind in c._tensor.indices():
         assert_close(c[ind], c2[ind])
 
@@ -377,4 +377,10 @@ def test_bmm(backend: str, data: DataObject) -> None:
         .sum(2)
         .view(D, A, C)
     )
-    assert_close_tensor(c, c2)
+
+    try:
+        assert_close_tensor(c, c2)
+    except AssertionError as e:
+        print(f"Error: Input a: {a} Input b: {b}")
+        print(f"Assertion Values: c: {c} c2: {c2}")
+        raise e

@@ -178,7 +178,6 @@ class All(Function):
             return a.f.mul_reduce(a.contiguous().view(int(operators.prod(a.shape))), 0)
 
 
-# TODO: Implement for Task 2.3.
 class Mul(Function):
     @staticmethod
     def forward(ctx: Context, a: Tensor, b: Tensor) -> Tensor:
@@ -234,9 +233,9 @@ class Sigmoid(Function):
             Sigmoided tensor
 
         """
-        sig: Tensor = t1.f.sigmoid_map(t1)
-        ctx.save_for_backward(sig)
-        return sig
+        out = t1.f.sigmoid_map(t1)
+        ctx.save_for_backward(out)
+        return out
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
@@ -253,7 +252,7 @@ class Sigmoid(Function):
 
         """
         sigma: Tensor = ctx.saved_values[0]
-        return sigma * (1.0 - sigma) * grad_output
+        return sigma * (-sigma + 1.0) * grad_output
 
 
 class ReLU(Function):
@@ -418,7 +417,7 @@ class LT(Function):
             Less than tensor
 
         """
-        ctx.save_for_backward(a, b)
+        ctx.save_for_backward(a.shape, b.shape)
         return a.f.lt_zip(a, b)
 
     @staticmethod
@@ -528,7 +527,7 @@ class Permute(Function):
             Permuted gradient
 
         """
-        (order,) = ctx.saved_values[0]
+        order: Tensor = ctx.saved_values[0]
         order2: List[int] = [
             a[0]
             for a in sorted(

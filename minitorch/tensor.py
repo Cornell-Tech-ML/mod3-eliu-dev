@@ -373,8 +373,6 @@ class Tensor:
         return self._tensor.shape
 
     # Functions
-    # TODO: Implement for Task 2.3.
-    # Functions
     def __add__(self, b: TensorLike) -> Tensor:
         return Add.apply(self, self._ensure_tensor(b))
 

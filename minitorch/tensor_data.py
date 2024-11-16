@@ -46,10 +46,9 @@ def index_to_position(index: Index, strides: Strides) -> int:
         Position in storage
 
     """
-    # TODO: Implement for Task 2.1.
     position = 0
-    for i in range(len(index)):
-        position += index[i] * strides[i]
+    for ind, stride in zip(index, strides):
+        position += ind * stride
     return position
 
 
@@ -66,11 +65,11 @@ def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
         out_index : return index corresponding to position.
 
     """
-    # TODO: Implement for Task 2.1.
-    strides = strides_from_shape(tuple(shape))
-    for i in range(len(strides)):
-        out_index[i] = ordinal // strides[i]
-        ordinal = ordinal % strides[i]
+    cur_ord = ordinal + 0
+    for i in range(len(shape) - 1, -1, -1):
+        sh = shape[i]
+        out_index[i] = int(cur_ord % sh)
+        cur_ord = cur_ord // sh
 
 
 def broadcast_index(
@@ -94,17 +93,12 @@ def broadcast_index(
         None
 
     """
-    # TODO: Implement for Task 2.2.
-    if len(big_shape) < len(shape):
-        raise IndexingError(f"Cannot broadcast {big_shape} to {shape}")
-
-    starting_dim = len(big_shape) - len(shape)
-    for i in range(starting_dim, len(big_shape)):
-        j = i - starting_dim
-        if shape[j] == 1:
-            out_index[j] = 0
+    for i, s in enumerate(shape):
+        if s > 1:
+            out_index[i] = big_index[i + (len(big_shape) - len(shape))]
         else:
-            out_index[j] = big_index[i]
+            out_index[i] = 0
+    return None
 
 
 def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
@@ -124,22 +118,23 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
         IndexingError : if cannot broadcast
 
     """
-    # TODO: Implement for Task 2.2.
-    max_len = max(len(shape1), len(shape2))
-    shape1 = (1,) * (max_len - len(shape1)) + tuple(shape1)
-    shape2 = (1,) * (max_len - len(shape2)) + tuple(shape2)
+    a, b = shape1, shape2
+    max_len = max(len(a), len(b))
+    result = [0] * max_len
+    a_rev = list(reversed(a))
+    b_rev = list(reversed(b))
 
-    result = []
-    for s1, s2 in zip(reversed(shape1), reversed(shape2)):
-        if s1 == s2:
-            result.append(s1)
-        elif s1 == 1:
-            result.append(s2)
-        elif s2 == 1:
-            result.append(s1)
+    for i in range(max_len):
+        if i >= len(a_rev):
+            result[i] = b_rev[i]
+        elif i >= len(b_rev):
+            result[i] = a_rev[i]
         else:
-            raise IndexingError(f"Cannot broadcast shapes {shape1} and {shape2}")
-
+            result[i] = max(a_rev[i], b_rev[i])
+            if a_rev[i] != result[i] and a_rev[i] != 1:
+                raise IndexingError(f"Cannot broadcast shapes {a} and {b}")
+            if b_rev[i] != result[i] and b_rev[i] != 1:
+                raise IndexingError(f"Cannot broadcast shapes {a} and {b}")
     return tuple(reversed(result))
 
 
@@ -325,27 +320,11 @@ class TensorData:
             range(len(self.shape))
         ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
 
-        # TODO: Implement for Task 2.1.
-        """
-        Permute the dimensions of the tensor.
-
-        Args:
-            order (list): a permutation of the dimensions
-
-        Returns:
-            New `TensorData` with the same storage and a new dimension order.
-        """
-        assert list(sorted(order)) == list(
-            range(len(self.shape))
-        ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
-
-        # TODO: Implement for Task 2.1.
-        strides = [self.strides[i] for i in order]
-        shape = [self.shape[i] for i in order]
-        # print(
-        #     f"order: {order} --- strides (original):  {self.strides} strides(new) {strides} --- shape(original): {self.shape} shape(new): {shape}"
-        # )
-        return TensorData(self._storage, tuple(shape), tuple(strides))
+        return TensorData(
+            self._storage,
+            tuple([self.shape[o] for o in order]),
+            tuple([self._strides[o] for o in order]),
+        )
 
     def to_string(self) -> str:
         """Convert to string"""

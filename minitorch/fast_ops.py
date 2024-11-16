@@ -344,7 +344,7 @@ def _tensor_matrix_multiply(
     # TODO: Implement for Task 3.2.
     for n in prange(out_shape[0]):
         for i in prange(out_shape[1]):
-            for j in range(out_shape[2]):
+            for j in prange(out_shape[2]):
                 temp = 0.0
                 for k in range(a_shape[-1]):
                     a_pos = n * a_batch_stride + i * a_strides[1] + k * a_strides[2]

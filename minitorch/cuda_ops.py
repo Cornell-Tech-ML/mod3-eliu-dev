@@ -223,7 +223,7 @@ def tensor_zip(
 
 
 def _sum_practice(out: Storage, a: Storage, size: int) -> None:
-    """This is a practice sum kernel to prepare for reduce.
+    r"""A practice sum kernel to prepare for reduce.
 
     Given an array of length $n$ and out of size $n // \text{blockDIM}$
     it should sum up each blockDim values into an out cell.
@@ -244,13 +244,18 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
 
     """
     BLOCK_DIM = 32
-
     cache = cuda.shared.array(BLOCK_DIM, numba.float64)
     i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     pos = cuda.threadIdx.x
 
     # TODO: Implement for Task 3.3.
-    raise NotImplementedError("Need to implement for Task 3.3")
+    num_blocks = (size + (BLOCK_DIM - 1)) // BLOCK_DIM
+    for block in range(num_blocks):
+        if i < size and i >= block * BLOCK_DIM and i < (block + 1) * BLOCK_DIM:
+            cache[pos] = a[i]
+        cuda.syncthreads()
+        temp_sum = sum(cache)
+        out[len(out) - 1] = temp_sum
 
 
 jit_sum_practice = cuda.jit()(_sum_practice)
@@ -307,7 +312,7 @@ def tensor_reduce(
 
 
 def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
-    """This is a practice square MM kernel to prepare for matmul.
+    """A practice square MM kernel to prepare for matmul.
 
     Given a storage `out` and two storage `a` and `b`. Where we know
     both are shape [size, size] with strides [size, 1].

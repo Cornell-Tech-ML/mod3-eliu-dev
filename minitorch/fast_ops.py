@@ -1,5 +1,4 @@
 from __future__ import annotations
-import minitorch
 from typing import TYPE_CHECKING, TypeVar, Any
 
 import numpy as np
@@ -129,7 +128,6 @@ class FastOps(TensorOps):
         out = a.zeros(tuple(ls))
 
         tensor_matrix_multiply(*out.tuple(), *a.tuple(), *b.tuple())
-        print(f"!!matrix mul: {out}")
         # Undo 3d if we added it.
         if both_2d:
             out = out.view(out.shape[1], out.shape[2])

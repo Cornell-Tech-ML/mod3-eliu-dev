@@ -346,7 +346,6 @@ def test_mm2() -> None:
     c = a @ b
 
     c2 = (a.view(2, 3, 1) * b.view(1, 3, 4)).sum(1).view(2, 4)
-    print(f"----\nc: {c}\nc2: {c2}", flush=True)
     for ind in c._tensor.indices():
         assert_close(c[ind], c2[ind])
 

@@ -29,11 +29,13 @@ FakeCUDAKernel = Any
 Fn = TypeVar("Fn")
 
 
-def device_jit(fn: Fn, **kwargs) -> Fn:
+def device_jit(fn: Fn, **kwargs: Any) -> Fn:
+    """Compile a function for CUDA based on device type."""
     return _jit(device=True, **kwargs)(fn)  # type: ignore
 
 
-def jit(fn, **kwargs) -> FakeCUDAKernel:
+def jit(fn: Fn, **kwargs: Any) -> FakeCUDAKernel:
+    """Compile a function for CUDA."""
     return _jit(**kwargs)(fn)  # type: ignore
 
 
@@ -49,7 +51,36 @@ class CudaOps(TensorOps):
 
     @staticmethod
     def map(fn: Callable[[float], float]) -> MapProto:
-        """See `tensor_ops.py`"""
+        """Higher-order tensor map function ::
+
+          fn_map = map(fn)
+          fn_map(a, out)
+          out
+
+        Simple version::
+
+            for i:
+                for j:
+                    out[i, j] = fn(a[i, j])
+
+        Broadcasted version (`a` might be smaller than `out`) ::
+
+            for i:
+                for j:
+                    out[i, j] = fn(a[i, 0])
+
+        Args:
+        ----
+            fn: function from float-to-float to apply.
+            a (:class:`TensorData`): tensor to map over
+            out (:class:`TensorData`): optional, tensor data to fill in,
+                   should broadcast with `a`
+
+        Returns:
+        -------
+            new tensor data
+
+        """
         cufn: Callable[[float], float] = device_jit(fn)
         f = tensor_map(cufn)
 
@@ -67,6 +98,19 @@ class CudaOps(TensorOps):
 
     @staticmethod
     def zip(fn: Callable[[float, float], float]) -> Callable[[Tensor, Tensor], Tensor]:
+        """Higher-order tensor zip function ::
+
+        Args:
+        ----
+            fn: function from two floats-to-float to apply
+            a (:class:`TensorData`): tensor to zip over
+            b (:class:`TensorData`): tensor to zip over
+
+        Returns:
+        -------
+            :class:`TensorData` : new tensor data
+
+        """
         cufn: Callable[[float, float], float] = device_jit(fn)
         f = tensor_zip(cufn)
 
@@ -86,6 +130,18 @@ class CudaOps(TensorOps):
     def reduce(
         fn: Callable[[float, float], float], start: float = 0.0
     ) -> Callable[[Tensor, int], Tensor]:
+        """Higher-order tensor reduce function. ::
+
+        Args:
+        ----
+            fn: function from two floats-to-float to apply reduce over
+            start (int): int of dim to reduce
+
+        Returns:
+        -------
+            :class:`TensorData` : new tensor
+
+        """
         cufn: Callable[[float, float], float] = device_jit(fn)
         f = tensor_reduce(cufn)
 
@@ -106,6 +162,18 @@ class CudaOps(TensorOps):
 
     @staticmethod
     def matrix_multiply(a: Tensor, b: Tensor) -> Tensor:
+        """Higher-order tensor matrix multiply function ::
+
+        Args:
+        ----
+            a (:class:`TensorData`): tensor to multiply
+            b (:class:`TensorData`): tensor to multiply
+
+        Returns:
+        -------
+            :class:`TensorData` : new tensor data
+
+        """
         # Make these always be a 3 dimensional multiply
         both_2d = 0
         if len(a.shape) == 2:
@@ -284,6 +352,17 @@ jit_sum_practice = cuda.jit()(_sum_practice)
 
 
 def sum_practice(a: Tensor) -> TensorData:
+    """CUDA practice sum function.
+
+    Args:
+    ----
+        a (:class:`TensorData`): tensor to sum over
+
+    Returns:
+    -------
+        :class:`TensorData` : new tensor data
+
+    """
     (size,) = a.shape
     threadsperblock = THREADS_PER_BLOCK
     blockspergrid = (size // THREADS_PER_BLOCK) + 1
@@ -384,7 +463,7 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
 
     """
     BLOCK_DIM = 32
-    # TODO: Implement for Task 3.3.
+    # TODO: Implement for Task 3.4.
     raise NotImplementedError("Need to implement for Task 3.3")
 
 
@@ -392,6 +471,18 @@ jit_mm_practice = jit(_mm_practice)
 
 
 def mm_practice(a: Tensor, b: Tensor) -> TensorData:
+    """CUDA practice matrix multiply function.
+
+    Args:
+    ----
+        a (:class:`TensorData`): tensor to multiply
+        b (:class:`TensorData`): tensor to multiply
+
+    Returns:
+    -------
+        :class:`TensorData` : new tensor data
+
+    """
     (size, _) = a.shape
     threadsperblock = (THREADS_PER_BLOCK, THREADS_PER_BLOCK)
     blockspergrid = 1

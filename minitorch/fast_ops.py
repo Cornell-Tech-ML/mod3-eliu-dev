@@ -29,6 +29,7 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """JIT compile a function."""
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -174,8 +175,8 @@ def tensor_map(
                 out[i] = fn(in_storage[i])
         else:
             for i in prange(len(out)):
-                out_index: Index = np.empty(MAX_DIMS, np.int16)
-                in_index: Index = np.empty(MAX_DIMS, np.int16)
+                out_index: Index = np.empty(MAX_DIMS, np.int32)
+                in_index: Index = np.empty(MAX_DIMS, np.int32)
                 to_index(i, out_shape, out_index)
                 broadcast_index(out_index, out_shape, in_shape, in_index)
                 in_position = index_to_position(in_index, in_strides)
@@ -230,8 +231,8 @@ def tensor_zip(
                 out[i] = fn(a_storage[i], b_storage[i])
         else:
             for i in prange(len(out)):
-                out_index: Index = np.empty(MAX_DIMS, np.int16)
-                a_index: Index = np.empty(MAX_DIMS, np.int16)
+                out_index: Index = np.empty(MAX_DIMS, np.int32)
+                a_index: Index = np.empty(MAX_DIMS, np.int32)
                 b_index: Index = np.empty(MAX_DIMS, np.int32)
                 to_index(i, out_shape, out_index)
                 out_position = index_to_position(out_index, out_strides)

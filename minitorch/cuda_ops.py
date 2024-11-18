@@ -463,8 +463,26 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
 
     """
     BLOCK_DIM = 32
-    # TODO: Implement for Task 3.4.
-    raise NotImplementedError("Need to implement for Task 3.3")
+    # TODO: Implement for Task 3.3.
+
+    shared_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    shared_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+    j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
+
+    pi = cuda.threadIdx.x
+    pj = cuda.threadIdx.y
+
+    if i < size and j < size:
+        shared_a[pi, pj] = a[i * size + j]
+        shared_b[pi, pj] = b[i * size + j]
+
+    cuda.syncthreads()
+    if i < size and j < size:
+        temp = 0.0
+        for k in range(size):
+            temp += shared_a[pi, k] * shared_b[k, pj]
+        out[i * size + j] = temp
 
 
 jit_mm_practice = jit(_mm_practice)
@@ -545,7 +563,31 @@ def _tensor_matrix_multiply(
     #    b) Copy into shared memory for b matrix
     #    c) Compute the dot produce for position c[i, j]
     # TODO: Implement for Task 3.4.
-    raise NotImplementedError("Need to implement for Task 3.4")
+    acc = 0.0
+    for s in range(0, a_shape[2], BLOCK_DIM):
+        if i < a_shape[1] and (s + pj) < a_shape[2]:
+            a_pos = batch * a_batch_stride + i * a_strides[1] + (s + pj) * a_strides[2]
+            a_shared[pi, pj] = a_storage[a_pos]
+        else:
+            a_shared[pi, pj] = 0.0
+
+        if (s + pi) < b_shape[1] and j < b_shape[2]:
+            b_pos = batch * b_batch_stride + (s + pi) * b_strides[1] + j * b_strides[2]
+            b_shared[pi, pj] = b_storage[b_pos]
+        else:
+            b_shared[pi, pj] = 0.0
+
+        cuda.syncthreads()
+
+        for k in range(BLOCK_DIM):
+            if s + k < a_shape[2]:
+                acc += a_shared[pi, k] * b_shared[k, pj]
+
+        cuda.syncthreads()
+
+    if i < out_shape[1] and j < out_shape[2]:
+        out_pos = batch * out_strides[0] + i * out_strides[1] + j * out_strides[2]
+        out[out_pos] = acc
 
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)

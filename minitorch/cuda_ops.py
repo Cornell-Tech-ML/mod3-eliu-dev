@@ -563,28 +563,41 @@ def _tensor_matrix_multiply(
     #    b) Copy into shared memory for b matrix
     #    c) Compute the dot produce for position c[i, j]
     # TODO: Implement for Task 3.4.
+
+    # Initialize local accumulator in each thread to calculate the dot product.
     acc = 0.0
+
+    # Process matrix in BLOCK_DIM x BLOCK_DIM tiles
+    # Copy elements from global memory to shared memory to speed up calculations.
     for s in range(0, a_shape[2], BLOCK_DIM):
+        # Load matrix A tile to shared memory (1 global read per element)
+        # Check bounds: i for row position, (s + pj) for column position within shared dim
         if i < a_shape[1] and (s + pj) < a_shape[2]:
             a_pos = batch * a_batch_stride + i * a_strides[1] + (s + pj) * a_strides[2]
             a_shared[pi, pj] = a_storage[a_pos]
         else:
             a_shared[pi, pj] = 0.0
 
+        # Load matrix B tile to shared memory (1 global read per element)
+        # Check bounds: (s + pi) for row position within shared dim, j for column position
         if (s + pi) < b_shape[1] and j < b_shape[2]:
             b_pos = batch * b_batch_stride + (s + pi) * b_strides[1] + j * b_strides[2]
             b_shared[pi, pj] = b_storage[b_pos]
         else:
             b_shared[pi, pj] = 0.0
 
+        # Ensure all threads complete their shared memory writes before computation
         cuda.syncthreads()
 
+        # Compute dot product from shared memory (2 shared reads per iteration)
+        # k iterates over the shared dimension within the current tile
         for k in range(BLOCK_DIM):
+            # Check if within the valid shared dimension
             if s + k < a_shape[2]:
                 acc += a_shared[pi, k] * b_shared[k, pj]
 
-        cuda.syncthreads()
-
+    # Write result (1 global write per output element)
+    # Check if thread's position is within output matrix bounds
     if i < out_shape[1] and j < out_shape[2]:
         out_pos = batch * out_strides[0] + i * out_strides[1] + j * out_strides[2]
         out[out_pos] = acc

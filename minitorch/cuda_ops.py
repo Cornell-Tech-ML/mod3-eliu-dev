@@ -595,6 +595,9 @@ def _tensor_matrix_multiply(
             # Check if within the valid shared dimension
             if s + k < a_shape[2]:
                 acc += a_shared[pi, k] * b_shared[k, pj]
+        # Sync threads to ensure all threads have completed their dot product
+        # before proceeding to the next tile
+        cuda.syncthreads()
 
     # Write result (1 global write per output element)
     # Check if thread's position is within output matrix bounds

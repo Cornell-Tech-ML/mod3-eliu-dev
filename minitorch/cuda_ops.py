@@ -465,6 +465,7 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
     BLOCK_DIM = 32
     # TODO: Implement for Task 3.3.
 
+    # Initialize shared memory arrays for matrix A and B to avoid minimize reads from global memory
     shared_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
     shared_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
     i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
@@ -473,15 +474,25 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
     pi = cuda.threadIdx.x
     pj = cuda.threadIdx.y
 
+    # Copy elements from global memory to shared memory (1 global read per element in matrix A and B)
+    # Use guard to ensure threads only attemptto read elements within the matrix
     if i < size and j < size:
         shared_a[pi, pj] = a[i * size + j]
         shared_b[pi, pj] = b[i * size + j]
 
+    # Ensure all threads complete their shared memory writes before computation
     cuda.syncthreads()
+
+    # Compute the dot product for the current position in the matrix
+    # Use guard to ensure threads only attempt to use positions within the matrix
     if i < size and j < size:
+        # Initialize local accumulator for each thread to calculate the dot product and speed up calculations
         temp = 0.0
+        # Use shared memory to compute dot product for the current position in the matrix
         for k in range(size):
             temp += shared_a[pi, k] * shared_b[k, pj]
+
+        # Write the result to global memory (1 global write per output element)
         out[i * size + j] = temp
 
 
